@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ses Üretici</title>
+<style>
+  :root{
+    --bg:#0f1e33; --panel:#16294a; --line:#2a4470; --text:#e8eef8; --muted:#9db0cf;
+    --accent:#4fa3ff; --accent-2:#2f7fe0; --ok:#3ccf8e; --err:#ff6b6b; --field:#0c1829;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#eef3fa; --panel:#ffffff; --line:#cfdcef; --text:#13233d; --muted:#5a6f90;
+      --accent:#1f6fd6; --accent-2:#1557ad; --ok:#138a57; --err:#c43838; --field:#f6f9fd;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:28px 28px;background-attachment:fixed}
+  main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:4px 0 2px;letter-spacing:.3px}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 12px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;background:var(--field);color:var(--text);border:1px solid var(--line);
+    border-radius:8px;padding:10px;font:inherit}
+  textarea{min-height:130px;resize:vertical}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:560px){.row{grid-template-columns:1fr}}
+  .inline{display:flex;gap:8px;align-items:center}
+  .inline input{flex:1}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;font:600 14px/1 inherit;cursor:pointer}
+  button:hover{background:var(--accent-2)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  button:disabled{opacity:.5;cursor:default}
+  .big{width:100%;padding:14px;font-size:16px;margin-top:6px}
+  .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+  .status{font-size:13px;margin-top:10px;min-height:18px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)}
+  .result{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .result:first-child{border-top:0;margin-top:0;padding-top:0}
+  .result h3{font-size:14px;margin:0 0 8px}
+  audio{width:100%;margin-bottom:8px}
+  .bar{height:8px;background:var(--field);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
+  .bar>div{height:100%;background:var(--accent);width:0}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  a.dl{display:inline-block;color:#fff;background:var(--ok);padding:9px 12px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Ses Üretici</h1>
+  <p class="sub">ElevenLabs API ile Türkçe ve İngilizce seslendirme — Teknik Mekanik</p>
+
+  <section class="card">
+    <h2>1 · Ayarlar</h2>
+    <label for="key">API anahtarı</label>
+    <div class="inline">
+      <input id="key" type="password" autocomplete="off" placeholder="sk_...">
+      <button class="ghost" id="showKey" type="button">Göster</button>
+    </div>
+    <div class="hint">Anahtar yalnızca bu cihazın tarayıcısında saklanır, başka bir yere gönderilmez (sadece ElevenLabs'e).</div>
+    <button id="connect" type="button" style="margin-top:10px">Bağlan ve sesleri getir</button>
+    <div class="status" id="connStatus"></div>
+
+    <div class="row">
+      <div>
+        <label for="voice">Ses</label>
+        <select id="voice"><option value="">Önce bağlanın</option></select>
+      </div>
+      <div>
+        <label for="model">Model</label>
+        <select id="model"><option value="">Önce bağlanın</option></select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="stability">Stabilite: <span id="stabilityV">0.50</span></label>
+        <input id="stability" type="range" min="0" max="1" step="0.05" value="0.5">
+      </div>
+      <div>
+        <label for="speed">Hız: <span id="speedV">1.00</span></label>
+        <input id="speed" type="range" min="0.7" max="1.2" step="0.05" value="1">
+      </div>
+    </div>
+
+    <div id="usage" class="hint"></div>
+    <div class="bar"><div id="usageBar"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Metinler</h2>
+    <label for="name">Dosya adı</label>
+    <input id="name" placeholder="ornek: disli-carklar">
+
+    <label for="tr">Türkçe metin</label>
+    <textarea id="tr" placeholder="Türkçe seslendirme metni..."></textarea>
+    <div class="meta"><span id="trCount">0 karakter</span><span id="trCost"></span></div>
+
+    <label for="en">İngilizce metin</label>
+    <textarea id="en" placeholder="English voiceover text..."></textarea>
+    <div class="meta"><span id="enCount">0 karakter</span><span id="enCost"></span></div>
+
+    <button class="big" id="go" type="button">Sesleri üret</button>
+    <div class="status" id="genStatus"></div>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <h2>3 · Sonuç</h2>
+    <div id="resultList"></div>
+  </section>
+</main>
+
+<script>
+const API = "https://api.elevenlabs.io/v1";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem("sesuretici_"+k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem("sesuretici_"+k, v); }catch(e){} }
+};
+
+// Restore saved fields
+["key","voice","model","stability","speed","name"].forEach(k=>{
+  const v = store.get(k); if(v!==null && $(k)) $(k).value = v;
+});
+$("stabilityV").textContent = Number($("stability").value).toFixed(2);
+$("speedV").textContent = Number($("speed").value).toFixed(2);
+
+$("showKey").onclick = () => {
+  const k = $("key"); k.type = k.type === "password" ? "text" : "password";
+  $("showKey").textContent = k.type === "password" ? "Göster" : "Gizle";
+};
+$("key").addEventListener("change", e => store.set("key", e.target.value.trim()));
+["voice","model","name"].forEach(k => $(k).addEventListener("change", e => store.set(k, e.target.value)));
+["stability","speed"].forEach(k => $(k).addEventListener("input", e => {
+  $(k+"V").textContent = Number(e.target.value).toFixed(2); store.set(k, e.target.value);
+}));
+
+function setStatus(el, msg, type){ el.textContent = msg; el.className = "status" + (type ? " "+type : ""); }
+
+async function api(path, opts={}){
+  const key = $("key").value.trim();
+  if(!key) throw new Error("API anahtarı girilmedi.");
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { "xi-api-key": key, ...(opts.headers||{}) }
+  });
+  if(!res.ok){
+    let detail = "";
+    try{ const j = await res.json(); detail = j.detail?.message || j.detail?.status || JSON.stringify(j.detail || j); }
+    catch(e){ detail = await res.text().catch(()=> ""); }
+    throw new Error("Hata " + res.status + (detail ? ": " + detail : ""));
+  }
+  return res;
+}
+
+// Approximate API price per 1K characters, by model family (from the ElevenAPI pricing page)
+function pricePer1k(modelId){
+  const id = (modelId||"").toLowerCase();
+  if(id.includes("flash") || id.includes("turbo") || id.includes("conversational")) return 0.04;
+  return 0.08;
+}
+function updateCounts(){
+  const m = $("model").value;
+  [["tr","trCount","trCost"],["en","enCount","enCost"]].forEach(([t,c,p])=>{
+    const n = $(t).value.trim().length;
+    $(c).textContent = n.toLocaleString("tr-TR") + " karakter";
+    $(p).textContent = n && m ? "≈ $" + (n/1000*pricePer1k(m)).toFixed(3) : "";
+  });
+}
+["tr","en"].forEach(t => $(t).addEventListener("input", updateCounts));
+$("model").addEventListener("change", updateCounts);
+
+async function loadUsage(){
+  try{
+    const s = await (await api("/user/subscription")).json();
+    const used = s.character_count ?? 0, limit = s.character_limit ?? 0;
+    $("usage").textContent = `Plan: ${s.tier || "?"} · Kullanılan: ${used.toLocaleString("tr-TR")} / ${limit.toLocaleString("tr-TR")}`;
+    $("usageBar").style.width = limit ? Math.min(100, used/limit*100) + "%" : "0";
+  }catch(e){
+    $("usage").textContent = "Kullanım bilgisi alınamadı (anahtar izinlerini kontrol edin).";
+  }
+}
+
+$("connect").onclick = async () => {
+  const st = $("connStatus");
+  store.set("key", $("key").value.trim());
+  setStatus(st, "Bağlanılıyor...");
+  $("connect").disabled = true;
+  try{
+    const [vRes, mRes] = await Promise.all([api("/voices"), api("/models")]);
+    const voices = (await vRes.json()).voices || [];
+    const models = (await mRes.json()).filter(m => m.can_do_text_to_speech !== false);
+
+    const savedV = store.get("voice"), savedM = store.get("model");
+    $("voice").innerHTML = voices.map(v =>
+      `<option value="${v.voice_id}">${v.name}${v.category ? " · " + v.category : ""}</option>`).join("");
+    if(savedV && voices.some(v=>v.voice_id===savedV)) $("voice").value = savedV;
+
+    // Prefer multilingual models (Turkish + English)
+    models.sort((a,b) => (b.languages?.length||0) - (a.languages?.length||0));
+    $("model").innerHTML = models.map(m => {
+      const tr = (m.languages||[]).some(l => (l.language_id||"").toLowerCase()==="tr");
+      return `<option value="${m.model_id}">${m.name}${tr ? "" : " (Türkçe listede yok)"} · ≈$${pricePer1k(m.model_id)}/1K</option>`;
+    }).join("");
+    if(savedM && models.some(m=>m.model_id===savedM)) $("model").value = savedM;
+
+    store.set("voice", $("voice").value); store.set("model", $("model").value);
+    setStatus(st, `Bağlandı: ${voices.length} ses, ${models.length} model.`, "ok");
+    updateCounts();
+    loadUsage();
+  }catch(e){
+    setStatus(st, e.message.includes("Failed to fetch")
+      ? "Bağlanamadı. İnternet bağlantısını kontrol edin; dosyayı tarayıcıda açtığınızdan emin olun."
+      : e.message, "err");
+  }finally{
+    $("connect").disabled = false;
+  }
+};
+
+function slug(s){
+  return (s||"ses").toLowerCase()
+    .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ı/g,"i").replace(/ö/g,"o").replace(/ç/g,"c")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "ses";
+}
+
+async function tts(text){
+  const voice = $("voice").value, model = $("model").value;
+  const body = {
+    text, model_id: model,
+    voice_settings: {
+      stability: Number($("stability").value),
+      similarity_boost: 0.75,
+      speed: Number($("speed").value)
+    }
+  };
+  const res = await api(`/text-to-speech/${voice}?output_format=mp3_44100_128`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "audio/mpeg" },
+    body: JSON.stringify(body)
+  });
+  return await res.blob();
+}
+
+function addResult(label, blob, filename){
+  const url = URL.createObjectURL(blob);
+  const div = document.createElement("div");
+  div.className = "result";
+  div.innerHTML = `<h3>${label}</h3><audio controls src="${url}"></audio>
+    <a class="dl" href="${url}" download="${filename}">⬇ ${filename}</a>`;
+  $("resultList").appendChild(div);
+}
+
+$("go").onclick = async () => {
+  const st = $("genStatus");
+  if(!$("voice").value || !$("model").value){ setStatus(st, "Önce 'Bağlan ve sesleri getir' butonuna basın.", "err"); return; }
+  const jobs = [["Türkçe","tr"],["İngilizce","en"]].filter(([,id]) => $(id).value.trim());
+  if(!jobs.length){ setStatus(st, "En az bir metin yazın.", "err"); return; }
+
+  const base = slug($("name").value);
+  $("go").disabled = true;
+  $("resultList").innerHTML = "";
+  $("results").hidden = false;
+  try{
+    for(const [label,id] of jobs){
+      setStatus(st, `${label} seslendiriliyor...`);
+      const blob = await tts($(id).value.trim());
+      addResult(label, blob, `${base}-${id}.mp3`);
+    }
+    setStatus(st, "Hazır. Dinleyip indirebilirsiniz.", "ok");
+    loadUsage();
+  }catch(e){
+    setStatus(st, e.message, "err");
+  }finally{
+    $("go").disabled = false;
+  }
+};
+
+// Auto-connect if a key was saved
+if($("key").value.trim()) $("connect").click();
+</script>
+</body>
+</html>
